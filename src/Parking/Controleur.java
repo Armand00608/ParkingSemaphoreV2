@@ -1,5 +1,4 @@
 package Parking;
-import java.awt.List;
 import java.util.ArrayList;
 
 import Parking.metier.*;
@@ -7,9 +6,12 @@ import Parking.ihm.*;
 
 public class Controleur 
 {
+    private static final int NB_VEHICULES = 300;
+
     private Parking parking;
     private ArrayList<Vehicule> vehicules;
     private FrameParking frame;
+    private int nbVehiculeEntre = 0;
     
     public Controleur()
     {		
@@ -19,26 +21,25 @@ public class Controleur
         // Créer l'IHM
         frame = new FrameParking(this);
         
-        int nbVehicules = 300;
+        System.out.println("=== Simulation avec " + NB_VEHICULES + " véhicules ===\n");
         
-        System.out.println("=== Simulation avec " + nbVehicules + " véhicules ===\n");
-        
-        for (int i = 0; i < nbVehicules; i++) 
+        for (int i = 0; i < NB_VEHICULES; i++) 
         {
             Vehicule vehicule = new Vehicule(parking, i + 1);
             this.vehicules.add(vehicule);
             vehicule.start();
             
-            // Délai entre chaque arrivée de véhicule (500-3500ms)
             try 
             {
-                Thread.sleep((int)(Math.random() * 3000) + 500);
+                this.majAffichage();
+                Thread.sleep((int)(Math.random() * 300) + 100);
             } 
             catch (InterruptedException e) 
             {
                 e.printStackTrace();
             }
         }
+        this.majAffichage();
     }
     public void retirerVehicule(int idVehicule) 
     { 
@@ -46,8 +47,8 @@ public class Controleur
         {
             if (vehicule.getIdVehicule()==idVehicule) 
             {
-                vehicules.remove(vehicule); break; 
-            
+                vehicules.remove(vehicule);  
+                this.majAffichage(); break;
             }
         }
     }
@@ -65,7 +66,7 @@ public class Controleur
 
     public int getNbVehiculesDehors()
     {
-        return vehicules.size();
+        return NB_VEHICULES - this.getNbVehiculeEntre();
     }
     public ArrayList<String> getVehiculesDehors() 
     { 
@@ -77,19 +78,38 @@ public class Controleur
             return liste; 
     }
     
+    public boolean[] getPlacesOccupees()
+    {
+        return parking.getPlacesOccupees();
+    }
+    
+    public int[] getVehiculeSurPlace()
+    {
+        return parking.getVehiculeSurPlace();
+    }
+
+    public boolean[] getPlaceRemorque()
+    {
+        return parking.getPlaceRemorque();
+    }
+    
     /**
      * Met à jour l'affichage du parking
      */
     public void majAffichage() 
     {
-        if (frame != null) 
-        {
-            frame.majAffichage();
-        }
+        if (this.frame != null)
+            this.frame.maj();
     }
     
     public static void main(String[] args) 
     {
         new Controleur();
+    }
+    public void incrementerVehiculeEntre() {
+        nbVehiculeEntre++;
+    }
+    public int getNbVehiculeEntre() {
+        return nbVehiculeEntre;
     }
 }

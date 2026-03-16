@@ -2,69 +2,171 @@ package Parking.ihm;
 
 import java.awt.*;
 
-public class DessinerParking 
+public class DessinerParking
 {
-    public static final int NB_COLONNES = 6;
-    public static final int NB_LIGNES   = 3;
-    
-    public static final int MARGE = 20;
-    public static final int ESPACE_NUMERO = 20; // Espace pour le numéro au-dessus
-    
-    /**
-     * Dessine le parking complet
-     */
-    public static void dessinerParking(Graphics2D g2d, int nbPlaces, int largeurPanel, int hauteurPanel) 
+    private static final int NB_COLONNES    = 6;
+    private static final int LARGEUR_PLACE  = 60;
+    private static final int HAUTEUR_PLACE  = 80;
+    private static final int MARGE          = 10;
+    private static final int ESPACE_NUMERO  = 20;
+
+    public static void dessiner(Graphics g, int nbPlaces, boolean[] placesOccupees, int[] vehiculeSurPlace, boolean[] placeRemorque)
     {
-        int largeurDisponible = largeurPanel - 2 * MARGE;
-        int hauteurDisponible = hauteurPanel - 2 * MARGE;
-        
-        int largeurPlace = largeurDisponible / NB_COLONNES;
-        int hauteurPlace = (hauteurDisponible - NB_LIGNES * ESPACE_NUMERO) / NB_LIGNES;
-        
-        int offsetX = (largeurPanel - NB_COLONNES * largeurPlace) / 2;
-        int offsetY = (hauteurPanel - NB_LIGNES * (hauteurPlace + ESPACE_NUMERO)) / 2;
-        
-        int numPlace = 0;
-        
-        for (int ligne = 0; ligne < NB_LIGNES; ligne++) 
+        for (int i = 0; i < nbPlaces; i++)
         {
-            for (int col = 0; col < NB_COLONNES; col++) 
+            int col = i % NB_COLONNES;
+            int lig = i / NB_COLONNES;
+
+            int x = MARGE + col * (LARGEUR_PLACE + MARGE);
+            int y = MARGE + lig * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO) + ESPACE_NUMERO;
+
+            // Numéro au-dessus
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 12));
+            String num = String.valueOf(i + 1);
+            FontMetrics fm = g.getFontMetrics();
+            g.drawString(num, x + (LARGEUR_PLACE - fm.stringWidth(num)) / 2, y - 5);
+
+            if (placeRemorque[i])
             {
-                if (numPlace >= nbPlaces) break;
-                
-                int x = offsetX + col * largeurPlace;
-                int y = offsetY + ligne * (hauteurPlace + ESPACE_NUMERO);
-                
-                dessinerPlace(g2d, x, y, largeurPlace, hauteurPlace, numPlace + 1);
-                numPlace++;
+                // Dessiner voiture+remorque sur 2 cases
+                dessinerVoitureAvecRemorque(g, x, y, vehiculeSurPlace[i]);
+
+                // Dessiner aussi le numéro de la 2ème place
+                i++;
+                col = i % NB_COLONNES;
+                int x2 = MARGE + col * (LARGEUR_PLACE + MARGE);
+                g.setColor(Color.WHITE);
+                num = String.valueOf(i + 1);
+                fm = g.getFontMetrics();
+                g.drawString(num, x2 + (LARGEUR_PLACE - fm.stringWidth(num)) / 2, y - 5);
+            }
+            else if (placesOccupees[i])
+            {
+                dessinerVoiture(g, x, y, vehiculeSurPlace[i]);
+            }
+            else
+            {
+                effacerVoiture(g, x, y);
             }
         }
     }
-    
-    /**
-     * Dessine une place de parking
-     */
-    public static void dessinerPlace(Graphics2D g2d, int x, int y, int largeur, int hauteur, int numero) 
+
+    public static void dessinerVoiture(Graphics g, int x, int y, int idVehicule)
     {
-        // Numéro de la place (au-dessus du carré)
-        g2d.setColor(Color.WHITE);
-        int fontSize = Math.max(12, Math.min(largeur / 4, ESPACE_NUMERO - 2));
-        g2d.setFont(new Font("Arial", Font.BOLD, fontSize));
-        String texte = String.valueOf(numero);
-        FontMetrics fm = g2d.getFontMetrics();
-        int textX = x + (largeur - fm.stringWidth(texte)) / 2;
-        int textY = y + fm.getAscent();
-        g2d.drawString(texte, textX, textY);
-        
-        // Fond de la place (décalé vers le bas pour laisser place au numéro)
-        int yPlace = y + ESPACE_NUMERO;
-        g2d.setColor(new Color(80, 180, 80)); // Vert
-        g2d.fillRect(x + 2, yPlace + 2, largeur - 4, hauteur - 4);
-        
-        // Bordure
-        g2d.setColor(Color.WHITE);
-        g2d.setStroke(new BasicStroke(2));
-        g2d.drawRect(x + 2, yPlace + 2, largeur - 4, hauteur - 4);
+        g.setColor(Color.RED);
+        g.fillRect(x, y, LARGEUR_PLACE, HAUTEUR_PLACE);
+        g.setColor(Color.BLACK);
+        g.drawRect(x, y, LARGEUR_PLACE, HAUTEUR_PLACE);
+
+        // Voiture
+        int vw = LARGEUR_PLACE - 16;
+        int vh = HAUTEUR_PLACE - 20;
+        int vx = x + 8;
+        int vy = y + 10;
+
+        g.setColor(Color.BLUE);
+        g.fillRoundRect(vx, vy, vw, vh, 10, 10);
+        g.setColor(Color.BLACK);
+        g.drawRoundRect(vx, vy, vw, vh, 10, 10);
+
+        // Roues
+        g.setColor(Color.DARK_GRAY);
+        g.fillOval(vx + 2,       vy + 4,        10, 10);
+        g.fillOval(vx + vw - 12, vy + 4,        10, 10);
+        g.fillOval(vx + 2,       vy + vh - 14,  10, 10);
+        g.fillOval(vx + vw - 12, vy + vh - 14,  10, 10);
+
+        // Pare-brise
+        g.setColor(Color.CYAN);
+        g.fillRect(vx + 6, vy + vh / 2 - 5, vw - 12, 10);
+
+        // ID du véhicule
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        String id = "V" + idVehicule;
+        FontMetrics fm = g.getFontMetrics();
+        int tx = x + (LARGEUR_PLACE - fm.stringWidth(id)) / 2;
+        int ty = y + HAUTEUR_PLACE - 5;
+        g.drawString(id, tx, ty);
     }
-    
+
+    public static void dessinerVoitureAvecRemorque(Graphics g, int x, int y, int idVehicule)
+    {
+        int doubleLargeur = LARGEUR_PLACE * 2 + MARGE;
+
+        // Fond rouge pour les 2 places
+        g.setColor(new Color(180, 50, 50));
+        g.fillRect(x, y, doubleLargeur, HAUTEUR_PLACE);
+        g.setColor(Color.BLACK);
+        g.drawRect(x, y, doubleLargeur, HAUTEUR_PLACE);
+
+        // === Voiture (partie gauche) ===
+        int vw = LARGEUR_PLACE - 16;
+        int vh = HAUTEUR_PLACE - 20;
+        int vx = x + 8;
+        int vy = y + 10;
+
+        g.setColor(Color.BLUE);
+        g.fillRoundRect(vx, vy, vw, vh, 10, 10);
+        g.setColor(Color.BLACK);
+        g.drawRoundRect(vx, vy, vw, vh, 10, 10);
+
+        // Roues voiture
+        g.setColor(Color.DARK_GRAY);
+        g.fillOval(vx + 2,       vy + 4,        10, 10);
+        g.fillOval(vx + vw - 12, vy + 4,        10, 10);
+        g.fillOval(vx + 2,       vy + vh - 14,  10, 10);
+        g.fillOval(vx + vw - 12, vy + vh - 14,  10, 10);
+
+        // Pare-brise voiture
+        g.setColor(Color.CYAN);
+        g.fillRect(vx + 6, vy + vh / 2 - 5, vw - 12, 10);
+
+        // === Attelage (barre entre voiture et remorque) ===
+        int attelageX = vx + vw;
+        int attelageY = y + HAUTEUR_PLACE / 2 - 3;
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(attelageX, attelageY, MARGE + 16, 6);
+
+        // === Remorque (partie droite) ===
+        int rx = x + LARGEUR_PLACE + MARGE + 8;
+        int rw = LARGEUR_PLACE - 16;
+        int rh = vh;
+        int ry = vy;
+
+        g.setColor(new Color(255, 165, 0)); // Orange
+        g.fillRoundRect(rx, ry, rw, rh, 8, 8);
+        g.setColor(Color.BLACK);
+        g.drawRoundRect(rx, ry, rw, rh, 8, 8);
+
+        // Roues remorque
+        g.setColor(Color.DARK_GRAY);
+        g.fillOval(rx + 2,       ry + rh - 14, 10, 10);
+        g.fillOval(rx + rw - 12, ry + rh - 14, 10, 10);
+
+        // Texte "R" sur la remorque
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        FontMetrics fm = g.getFontMetrics();
+        String rText = "R";
+        g.drawString(rText, rx + (rw - fm.stringWidth(rText)) / 2, ry + rh / 2 + fm.getAscent() / 2);
+
+        // ID du véhicule (centré sur les 2 cases)
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        String id = "V" + idVehicule;
+        fm = g.getFontMetrics();
+        int tx = x + (doubleLargeur - fm.stringWidth(id)) / 2;
+        int ty = y + HAUTEUR_PLACE - 5;
+        g.drawString(id, tx, ty);
+    }
+
+    public static void effacerVoiture(Graphics g, int x, int y)
+    {
+        g.setColor(Color.GREEN);
+        g.fillRect(x, y, LARGEUR_PLACE, HAUTEUR_PLACE);
+        g.setColor(Color.BLACK);
+        g.drawRect(x, y, LARGEUR_PLACE, HAUTEUR_PLACE);
+    }
 }

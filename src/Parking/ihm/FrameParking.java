@@ -9,7 +9,7 @@ public class FrameParking extends JFrame
 {
     private Controleur ctrl;
     private PanelParking panelParking;
-    private JPanel panelDehors;
+    private PanelDehors panelDehors;
     
     public FrameParking(Controleur ctrl) 
     {
@@ -57,10 +57,11 @@ public class FrameParking extends JFrame
     }
     
     /**
-     * Met à jour l'affichage du parking
+     * Met à jour l'affichage du parking et des véhicules dehors
      */
-    public void majAffichage() 
+    public void maj() 
     {
-        this.panelParking.repaint();
+        this.panelParking.maj();
+        this.panelDehors.maj();
     }
 }

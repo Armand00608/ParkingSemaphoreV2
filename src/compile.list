@@ -1,3 +1,9 @@
 Parking/metier/Vehicule.java
 Parking/metier/Parking.java
 Parking/Controleur.java
+Parking/ihm/FrameParking.java
+Parking/ihm/PanelParking.java
+Parking/ihm/PanelDehors.java
+Parking/ihm/DessinerParking.java
+Parking/ihm/DessinerDehors.java
+Parking/ihm/DessinerAttente.java
