@@ -5,35 +5,28 @@ public class Vehicule extends Thread
     private Parking parking;
     private int id;
     private int dureeStationnement;
-    private boolean avecRemorque;
-
+    
     public Vehicule(Parking parking, int id)
     {
         this.parking = parking;
         this.id = id;
-        this.dureeStationnement = (int)(Math.random() * 10000) + 5000;
-        this.avecRemorque = Math.random() < 0.3;
+        this.dureeStationnement = (int)(Math.random() * 8000) + 3000; // 3 à 11 secondes
     }
-
+    
     public int getIdVehicule()
     {
         return id;
     }
-
-    public boolean isAvecRemorque()
+    
+    public void run() 
     {
-        return avecRemorque;
-    }
-
-    public void run()
-    {
-        try
+        try 
         {
-            parking.entrer(id, avecRemorque);
+            parking.entrer(id);
             Thread.sleep(dureeStationnement);
-            parking.sortir(id, dureeStationnement, avecRemorque);
-        }
-        catch (InterruptedException e)
+            parking.sortir(id, dureeStationnement);
+        } 
+        catch (InterruptedException e) 
         {
             e.printStackTrace();
         }
