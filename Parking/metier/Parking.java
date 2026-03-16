@@ -1,6 +1,7 @@
 package Parking.metier;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
 import Parking.Controleur;
 
 public class Parking
@@ -13,6 +14,7 @@ public class Parking
     private boolean[] placesOccupees;
     private int[] vehiculeSurPlace;
     private boolean[] placeEstRemorque;
+    private final ReentrantLock mutex = new ReentrantLock(true);
 
     public Parking(Controleur ctrl)
     {
@@ -26,6 +28,14 @@ public class Parking
         this.placeEstRemorque = new boolean[nbPlaces];
     }
 
+    /**
+     * Entree d'un vehicule dans le parking.
+     * Si avecRemorque, on acquiert 2 permits et on cherche 2 places contigues
+     * verticalement (meme colonne, lignes consecutives).
+     * Le mutex (ReentrantLock) protege les tableaux partages sans synchronized.
+     * Pour les remorques : si aucune paire contigue n'est disponible apres
+     * l'acquisition, on relache et on reessaie (backoff leger).
+     */
     public void entrer(int idVehicule, boolean avecRemorque) throws InterruptedException
     {
         if (avecRemorque)
@@ -33,17 +43,31 @@ public class Parking
             while (true)
             {
                 semaphore.acquire(2);
-                int[] places = trouverDeuxPlacesContigues();
+                int[] places;
+                mutex.lock();
+                try
+                {
+                    places = trouverDeuxPlacesContigues();
+                    if (places != null)
+                    {
+                        placesOccupees[places[0]] = true;
+                        placesOccupees[places[1]] = true;
+                        vehiculeSurPlace[places[0]] = idVehicule;
+                        vehiculeSurPlace[places[1]] = idVehicule;
+                        placeEstRemorque[places[0]] = true;
+                        placeEstRemorque[places[1]] = true;
+                    }
+                }
+                finally
+                {
+                    mutex.unlock();
+                }
                 if (places != null)
                 {
-                    placesOccupees[places[0]] = true;
-                    placesOccupees[places[1]] = true;
-                    vehiculeSurPlace[places[0]] = idVehicule;
-                    vehiculeSurPlace[places[1]] = idVehicule;
-                    placeEstRemorque[places[0]] = true;
-                    placeEstRemorque[places[1]] = true;
-                    System.out.println("Vehicule " + idVehicule + " (remorque) entre -> places " + (places[0] + 1) + " et " + (places[1] + 1)
-                        + " | Permits: " + semaphore.availablePermits() + " | En attente: " + semaphore.getQueueLength());
+                    System.out.println("Vehicule " + idVehicule + " (remorque) entre -> places "
+                        + (places[0] + 1) + " et " + (places[1] + 1)
+                        + " | Permits: " + semaphore.availablePermits()
+                        + " | En attente: " + semaphore.getQueueLength());
                     ctrl.incrementerVehiculeEntre();
                     ctrl.majAffichage();
                     return;
@@ -58,14 +82,27 @@ public class Parking
         else
         {
             semaphore.acquire();
-            int place = trouverPlaceLibre();
+            int place;
+            mutex.lock();
+            try
+            {
+                place = trouverPlaceLibre();
+                if (place >= 0)
+                {
+                    placesOccupees[place] = true;
+                    vehiculeSurPlace[place] = idVehicule;
+                    placeEstRemorque[place] = false;
+                }
+            }
+            finally
+            {
+                mutex.unlock();
+            }
             if (place >= 0)
             {
-                placesOccupees[place] = true;
-                vehiculeSurPlace[place] = idVehicule;
-                placeEstRemorque[place] = false;
                 System.out.println("Vehicule " + idVehicule + " entre -> place " + (place + 1)
-                    + " | Permits: " + semaphore.availablePermits() + " | En attente: " + semaphore.getQueueLength());
+                    + " | Permits: " + semaphore.availablePermits()
+                    + " | En attente: " + semaphore.getQueueLength());
                 ctrl.incrementerVehiculeEntre();
                 ctrl.majAffichage();
             }
@@ -74,23 +111,38 @@ public class Parking
 
     public void sortir(int idVehicule, int duree, boolean avecRemorque) throws InterruptedException
     {
-        int placesLiberees = 0;
-        for (int i = 0; i < nbPlaces; i++)
+        int placesLiberees;
+        mutex.lock();
+        try
         {
-            if (vehiculeSurPlace[i] == idVehicule)
+            placesLiberees = 0;
+            for (int i = 0; i < nbPlaces; i++)
             {
-                placesOccupees[i] = false;
-                vehiculeSurPlace[i] = 0;
-                placeEstRemorque[i] = false;
-                placesLiberees++;
+                if (vehiculeSurPlace[i] == idVehicule)
+                {
+                    placesOccupees[i] = false;
+                    vehiculeSurPlace[i] = 0;
+                    placeEstRemorque[i] = false;
+                    placesLiberees++;
+                }
             }
         }
-        System.out.println("Vehicule " + idVehicule + (avecRemorque ? " (remorque)" : "") + " sort (" + placesLiberees + " place(s), duree: " + duree + "ms)"
-            + " | Permits: " + (semaphore.availablePermits() + placesLiberees) + " | En attente: " + semaphore.getQueueLength());
+        finally
+        {
+            mutex.unlock();
+        }
+        System.out.println("Vehicule " + idVehicule + (avecRemorque ? " (remorque)" : "")
+            + " sort (" + placesLiberees + " place(s), duree: " + duree + "ms)"
+            + " | Permits: " + (semaphore.availablePermits() + placesLiberees)
+            + " | En attente: " + semaphore.getQueueLength());
         ctrl.majAffichage();
         semaphore.release(placesLiberees);
     }
 
+    /**
+     * Cherche 2 places libres contigues verticalement (meme colonne, lignes consecutives).
+     * Doit etre appele sous le mutex.
+     */
     private int[] trouverDeuxPlacesContigues()
     {
         for (int col = 0; col < nbColonnes; col++)
@@ -108,6 +160,7 @@ public class Parking
         return null;
     }
 
+    /** Doit etre appele sous le mutex. */
     private int trouverPlaceLibre()
     {
         for (int i = 0; i < nbPlaces; i++)
@@ -125,12 +178,37 @@ public class Parking
 
     public int getNbPlacesOccupees()
     {
-        int count = 0;
-        for (boolean b : placesOccupees) if (b) count++;
-        return count;
+        mutex.lock();
+        try
+        {
+            int count = 0;
+            for (boolean b : placesOccupees) if (b) count++;
+            return count;
+        }
+        finally
+        {
+            mutex.unlock();
+        }
     }
 
-    public boolean[] getPlacesOccupees()    { return placesOccupees; }
-    public int[] getVehiculeSurPlace()      { return vehiculeSurPlace; }
-    public boolean[] getPlaceEstRemorque()  { return placeEstRemorque; }
+    public boolean[] getPlacesOccupees()
+    {
+        mutex.lock();
+        try { return placesOccupees.clone(); }
+        finally { mutex.unlock(); }
+    }
+
+    public int[] getVehiculeSurPlace()
+    {
+        mutex.lock();
+        try { return vehiculeSurPlace.clone(); }
+        finally { mutex.unlock(); }
+    }
+
+    public boolean[] getPlaceEstRemorque()
+    {
+        mutex.lock();
+        try { return placeEstRemorque.clone(); }
+        finally { mutex.unlock(); }
+    }
 }
