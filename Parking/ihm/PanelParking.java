@@ -12,8 +12,8 @@ public class PanelParking extends JPanel
     {
         this.ctrl = ctrl;
         this.setBackground(Color.DARK_GRAY);
-        int w = DessinerParking.getLargeurGrille(6) + DessinerParking.MARGE;
-        int h = DessinerParking.getHauteurGrille(3) + DessinerParking.MARGE;
+        int w = DessinerParking.getLargeurGrille(ctrl.getNbColonnes()) + DessinerParking.MARGE;
+        int h = DessinerParking.getHauteurGrille(ctrl.getNbLignes()) + DessinerParking.MARGE;
         this.setPreferredSize(new Dimension(w, h));
     }
 
@@ -28,6 +28,7 @@ public class PanelParking extends JPanel
         super.paintComponent(g);
         DessinerParking.dessiner(g,
             ctrl.getNbPlaces(),
+            ctrl.getNbColonnes(),
             ctrl.getPlacesOccupees(),
             ctrl.getVehiculeSurPlace(),
             ctrl.getPlaceEstRemorque());

@@ -9,17 +9,33 @@ public class DessinerParking
     public static final int HAUTEUR_PLACE = 80;
     public static final int MARGE         = 10;
     public static final int ESPACE_NUMERO = 20;
+    public static final int HAUTEUR_ENTETE = ESPACE_NUMERO; // espace pour l'entete des colonnes
 
-    public static void dessiner(Graphics g, int nbPlaces, boolean[] placesOccupees,
+    public static void dessiner(Graphics g, int nbPlaces, int nbColonnes,
+                                boolean[] placesOccupees,
                                 int[] vehiculeSurPlace, boolean[] placeEstRemorque)
     {
+        // Entetes des colonnes (A, B, C, ... max 26 colonnes)
+        g.setFont(new Font("Arial", Font.BOLD, 13));
+        FontMetrics fmHeader = g.getFontMetrics();
+        int nbColonnesAffichees = Math.min(nbColonnes, 26);
+        for (int col = 0; col < nbColonnesAffichees; col++)
+        {
+            String lettre = String.valueOf((char)('A' + col));
+            int xCol = MARGE + col * (LARGEUR_PLACE + MARGE);
+            g.setColor(new Color(180, 200, 255));
+            g.drawString(lettre,
+                xCol + (LARGEUR_PLACE - fmHeader.stringWidth(lettre)) / 2,
+                MARGE + fmHeader.getAscent() - 2);
+        }
+
         for (int i = 0; i < nbPlaces; i++)
         {
-            int col = i % NB_COLONNES;
-            int lig = i / NB_COLONNES;
+            int col = i % nbColonnes;
+            int lig = i / nbColonnes;
 
             int x = MARGE + col * (LARGEUR_PLACE + MARGE);
-            int y = MARGE + lig * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO) + ESPACE_NUMERO;
+            int y = MARGE + HAUTEUR_ENTETE + lig * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO) + ESPACE_NUMERO;
 
             // Numero au-dessus
             g.setColor(Color.WHITE);
@@ -33,13 +49,14 @@ public class DessinerParking
                 if (placeEstRemorque[i])
                 {
                     // Verifier si c'est la place du HAUT de la remorque
-                    int placeAuDessus = i - NB_COLONNES;
+                    int placeAuDessus = i - nbColonnes;
                     boolean estPlaceHaut = (placeAuDessus < 0
                         || vehiculeSurPlace[placeAuDessus] != vehiculeSurPlace[i]);
 
                     if (estPlaceHaut)
                     {
-                        int yBas = MARGE + (lig + 1) * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO)
+                        int yBas = MARGE + HAUTEUR_ENTETE
+                            + (lig + 1) * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO)
                             + ESPACE_NUMERO;
                         dessinerVoitureRemorque(g, x, y, yBas, vehiculeSurPlace[i]);
                     }
@@ -170,9 +187,9 @@ public class DessinerParking
         return MARGE + nbColonnes * (LARGEUR_PLACE + MARGE);
     }
 
-    /** Retourne la hauteur totale necessaire pour la grille. */
+    /** Retourne la hauteur totale necessaire pour la grille (inclut entetes des colonnes). */
     public static int getHauteurGrille(int nbLignes)
     {
-        return MARGE + nbLignes * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO) + ESPACE_NUMERO;
+        return MARGE + HAUTEUR_ENTETE + nbLignes * (HAUTEUR_PLACE + MARGE + ESPACE_NUMERO) + ESPACE_NUMERO;
     }
 }

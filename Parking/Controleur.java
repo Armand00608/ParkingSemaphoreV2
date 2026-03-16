@@ -3,6 +3,7 @@ package Parking;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.lang.reflect.InvocationTargetException;
 
 import Parking.metier.*;
 import Parking.ihm.*;
@@ -15,22 +16,30 @@ public class Controleur
     private List<Vehicule> vehicules;
     private FrameParking frame;
     private final AtomicInteger nbVehiculeEntre = new AtomicInteger(0);
+    private javax.swing.Timer timerMaj;
 
     public Controleur()
     {
         parking = new Parking(this);
         vehicules = new ArrayList<>();
 
-        // Creer l'IHM sur l'EDT
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            frame = new FrameParking(this);
-        });
-
-        // Attendre que la frame soit creee
-        while (frame == null)
+        // Creer l'IHM sur l'EDT et attendre qu'elle soit prete
+        try
         {
-            try { Thread.sleep(50); } catch (InterruptedException e) { e.printStackTrace(); }
+            javax.swing.SwingUtilities.invokeAndWait(() -> {
+                frame = new FrameParking(this);
+            });
         }
+        catch (InvocationTargetException | InterruptedException e)
+        {
+            System.err.println("Erreur lors de l'initialisation de l'interface graphique : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Rafraichissement periodique toutes les 500ms pour les etats des threads
+        timerMaj = new javax.swing.Timer(500, e -> frame.maj());
+        timerMaj.setCoalesce(true);
+        timerMaj.start();
 
         System.out.println("=== Simulation avec " + NB_VEHICULES + " vehicules ===\n");
 
@@ -57,6 +66,16 @@ public class Controleur
     public int getNbPlaces()
     {
         return parking.getNbPlaces();
+    }
+
+    public int getNbColonnes()
+    {
+        return parking.getNbColonnes();
+    }
+
+    public int getNbLignes()
+    {
+        return parking.getNbLignes();
     }
 
     public int getNbPlacesOccupees()
